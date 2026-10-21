@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Depunere USDT</title>
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Librărie Ethers.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); text-align: center; }
+        h2 { margin-top: 0; font-size: 22px; color: #fff; }
+        .subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+        label { display: block; text-align: left; font-size: 14px; color: #cbd5e1; margin-top: 15px; font-weight: 500; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background-color: #0f172a; color: white; margin-top: 6px; font-size: 16px; text-align: center; }
+        button { background-color: #2563eb; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 20px; font-size: 16px; transition: background 0.2s; }
+        button:hover { background-color: #1d4ed8; }
+        button:disabled { background-color: #475569; cursor: not-allowed; }
+        .status { margin-top: 20px; font-size: 14px; color: #38bdf8; word-break: break-all; padding: 10px; border-radius: 8px; background: rgba(56, 189, 248, 0.1); display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Depunere USDT</h2>
+    <div class="subtitle">Rețeaua Polygon</div>
+    
+    <button id="connectBtn" onclick="connectWallet()">Conectează Portofel</button>
+    
+    <div id="depositSection" style="display:none;">
+        <label for="txHash">Transaction Hash (ID Unic):</label>
+        <input type="text" id="txHash" readonly>
+
+        <label for="amount">Suma USDT:</label>
+        <input type="number" id="amount" placeholder="Ex: 15" value="15" min="1">
+        
+        <button id="depositBtn" onclick="handleDeposit()">Efectuează Depunerea</button>
+    </div>
+
+    <div class="status" id="statusText"></div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        });
+    }
+</script>
+<script src="app.js"></script>
+</body>
+</html>
