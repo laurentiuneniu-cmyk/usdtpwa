@@ -17,23 +17,37 @@ function generateBytes32Hash() {
 }
 
 async function connectWallet() {
-    if (window.ethereum) {
+    const statusText = document.getElementById("statusText");
+    
+    // Verificăm dacă există provider web3 (MetaMask, Trust Wallet, etc.)
+    if (typeof window.ethereum !== 'undefined') {
         try {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
+            showStatus("Se conectează la portofel...");
             
+            provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+            await provider.send("eth_requestAccounts", []);
+            
+            signer = provider.getSigner();
             const userAddress = await signer.getAddress();
+            
+            // Verificăm rețeaua (Polygon = 137 / 0x89)
+            const network = await provider.getNetwork();
+            if (network.chainId !== 137) {
+                alert("Te rog să schimbi rețeaua din MetaMask pe Polygon (Mainnet)!");
+            }
+
             document.getElementById("connectBtn").innerText = Conectat: ${userAddress.substring(0,6)}...${userAddress.substring(userAddress.length - 4)};
             document.getElementById("depositSection").style.display = "block";
             
             document.getElementById("txHash").value = generateBytes32Hash();
             showStatus("Portofel conectat cu succes!");
         } catch (error) {
-            showStatus("Eroare la conectare: " + error.message, true);
+            console.error(error);
+            showStatus("Eroare la conectare: " + (error.message || error), true);
         }
     } else {
-        alert("MetaMask nu a fost detectat! Deschide pagina direct din browserul aplicației MetaMask sau instalează extensia.");
+        alert("Nu s-a detectat niciun portofel Web3! Deschide linkul direct din browserul intern al aplicației MetaMask.");
+        showStatus("MetaMask lipsește sau nu este activ.", true);
     }
 }
 
@@ -49,25 +63,23 @@ async function handleDeposit() {
 
     try {
         depositBtn.disabled = true;
-        const amountWei = ethers.utils.parseUnits(amountInput, 6); // USDT are 6 zecimale
+        const amountWei = ethers.utils.parseUnits(amountInput, 6);
 
-        // Pasul 1: Approve USDT
-        showStatus("Pasul 1/2: Se solicită aprobarea USDT în MetaMask...");
+        showStatus("Pasul 1/2: Se solicită aprobarea USDT...");
         const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
         const approveTx = await usdtContract.approve(YOUR_CONTRACT_ADDRESS, amountWei);
         
-        showStatus("Se procesează aprobarea pe Polygon...");
+        showStatus("Se așteaptă confirmarea aprobării pe rețea...");
         await approveTx.wait();
 
-        // Pasul 2: Deposit
-        showStatus("Pasul 2/2: Se inițiază depunerea în Smart Contract...");
+        showStatus("Pasul 2/2: Se trimite depunerea în Smart Contract...");
         const myContract = new ethers.Contract(YOUR_CONTRACT_ADDRESS, YOUR_CONTRACT_ABI, signer);
         const depositTx = await myContract.deposit(txHashInput, amountWei);
         
-        showStatus("Se procesează depunerea pe blockchain...");
+        showStatus("Se procesează depunerea...");
         await depositTx.wait();
 
-        showStatus("✅ Depunere reușită! Tranzacția a fost salvată.");
+        showStatus("✅ Depunere reușită!");
         document.getElementById("txHash").value = generateBytes32Hash();
     } catch (error) {
         console.error(error);
