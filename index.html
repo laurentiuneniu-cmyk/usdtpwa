@@ -4,15 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Depunere USDT</title>
-    
-    <!-- PWA Setup -->
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e293b">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    <!-- Librărie Ethers.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -34,7 +28,7 @@
     <h2>Depunere USDT</h2>
     <div class="subtitle">Rețeaua Polygon</div>
     
-    <button id="connectBtn" onclick="connectWallet()">Conectează Portofel</button>
+    <button id="connectBtn">Conectează Portofel</button>
     
     <div id="depositSection" style="display:none;">
         <label for="txHash">Transaction Hash (ID Unic):</label>
@@ -43,19 +37,12 @@
         <label for="amount">Suma USDT:</label>
         <input type="number" id="amount" placeholder="Ex: 15" value="15" min="1">
         
-        <button id="depositBtn" onclick="handleDeposit()">Efectuează Depunerea</button>
+        <button id="depositBtn">Efectuează Depunerea</button>
     </div>
 
     <div class="status" id="statusText"></div>
 </div>
 
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-        });
-    }
-</script>
 <script src="app.js"></script>
 </body>
 </html>
