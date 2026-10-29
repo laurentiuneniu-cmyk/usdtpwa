@@ -1,14 +1,8 @@
-const USDT_ADDRESS = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; // USDT Polygon
-const YOUR_CONTRACT_ADDRESS = "0x6F8fa63C85165FcaC7714E3E430Cd3A9cf3c8aB3"; // Contractul tău
+// --- CONFIGURARE POLYGON ---
+const POLYGON_USDT = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F"; 
+const POLYGON_CONTRACT = "0x6F8fa63C85165FcaC7714E3E430Cd3A9cf3c8aB3"; // Contractul tău pentru swap
 
-let userAccount = null;
-
-// Funcție generare Hash Bytes32
-function getRandomBytes32() {
-    const array = new Uint8Array(32);
-    window.crypto.getRandomValues(array);
-    return "0x" + Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-}
+let polygonUserAddress = null;
 
 function showStatus(msg, isError = false) {
     const el = document.getElementById("statusText");
@@ -19,19 +13,22 @@ function showStatus(msg, isError = false) {
     el.innerText = msg;
 }
 
-// 1. Conectare Portofel
-async function connectWallet() {
-    showStatus("Se deschide MetaMask...");
-    
+// Generare Hash Bytes32 unic
+function getRandomBytes32() {
+    const array = new Uint8Array(32);
+    window.crypto.getRandomValues(array);
+    return "0x" + Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// 1. Conectare portofel pe Polygon
+async function connectPolygonWallet() {
     if (typeof window.ethereum === 'undefined') {
-        alert("MetaMask nu este detectat! Dacă ești pe mobil, deschide pagina din browserul din MetaMask.");
-        showStatus("MetaMask nu a fost găsit.", true);
+        alert("MetaMask nu este detectat! Deschide pagina din browserul intern MetaMask.");
         return;
     }
-
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        userAccount = accounts[0];
+        polygonUserAddress = accounts[0];
 
         // Verificăm rețeaua Polygon (0x89 = 137)
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
@@ -41,24 +38,23 @@ async function connectWallet() {
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: '0x89' }],
                 });
-            } catch (switchError) {
-                alert("Te rog să comuți rețeaua din MetaMask pe Polygon Mainnet!");
+            } catch (e) {
+                alert("Te rog să schimbi rețeaua în MetaMask pe Polygon Mainnet!");
             }
         }
 
-        document.getElementById("connectBtn").innerText = Conectat: ${userAccount.substring(0, 6)}...${userAccount.substring(userAccount.length - 4)};
+        document.getElementById("connectBtn").innerText = Conectat: ${polygonUserAddress.substring(0,6)}...;
         document.getElementById("depositSection").style.display = "block";
         document.getElementById("txHash").value = getRandomBytes32();
-        showStatus("Portofel conectat!");
+        showStatus("Portofel Polygon conectat cu succes!");
     } catch (err) {
-        console.error(err);
         showStatus("Eroare la conectare: " + err.message, true);
     }
 }
 
-// 2. Depunere (Approve + Deposit)
-async function handleDeposit() {
-    const amountVal = document.getElementById("amount").value;
+// 2. Fluxul complet: Approve USDT + Deposit în Smart Contract
+async function handlePolygonDeposit() {
+    const amountVal = document.getElementById("amountPoly").value;
     const txHashVal = document.getElementById("txHash").value;
     const depositBtn = document.getElementById("depositBtn");
 
@@ -69,52 +65,43 @@ async function handleDeposit() {
 
     try {
         depositBtn.disabled = true;
-        
-        // Conversie USDT 6 zecimale în HEX
-        const amountWeiBigInt = BigInt(Math.floor(amountVal * 1000000));
-        const amountHex = "0x" + amountWeiBigInt.toString(16);
+        const amountWeiBigInt = BigInt(Math.floor(amountVal * 1000000)); // USDT are 6 zecimale pe Polygon
+        const amountHex = amountWeiBigInt.toString(16).padStart(64, '0');
 
-        // PASUL 1: Approve USDT
-        showStatus("Pasul 1/2: Aprobă tranzacția în MetaMask...");
+        // PASUL 1: Aprobare (Approve) USDT către contractul tău
+        showStatus("Pasul 1/2: Aprobă tranzacția de USDT în MetaMask...");
+        const spenderPadded = POLYGON_CONTRACT.toLowerCase().replace("0x", "").padStart(64, '0');
         
-        // Function selector approve(address,uint256) -> 0x095ea7b3
-        const spenderPadded = YOUR_CONTRACT_ADDRESS.toLowerCase().replace("0x", "").padStart(64, '0');
-        const amountPadded = amountWeiBigInt.toString(16).padStart(64, '0');
-        const approveData = "0x095ea7b3" + spenderPadded + amountPadded;
-
-        const approveTxHash = await window.ethereum.request({
+        const approveTx = await window.ethereum.request({
             method: 'eth_sendTransaction',
-            params: [{
-                from: userAccount,
-                to: USDT_ADDRESS,
-                data: approveData
+            params: [{ 
+                from: polygonUserAddress, 
+                to: POLYGON_USDT, 
+                data: "0x095ea7b3" + spenderPadded + amountHex 
             }]
         });
 
-        showStatus("Se procesează aprobarea pe Polygon... Te rugăm să aștepți 5-10 secunde.");
-        
-        // Așteptăm 10 secunde pentru minare
+        showStatus("Se așteaptă confirmarea aprobării pe rețeaua Polygon (10 secunde)...");
         await new Promise(r => setTimeout(r, 10000));
 
-        // PASUL 2: Deposit în Contractul tău
-        showStatus("Pasul 2/2: Confirmă depunerea în MetaMask...");
-
-        // Function selector deposit(bytes32,uint256) -> 0x1de26e16
+        // PASUL 2: Deposit în Smart Contract cu Hash-ul unic
+        showStatus("Pasul 2/2: Confirmă depunerea în Smart Contract...");
         const hashClean = txHashVal.replace("0x", "").padStart(64, '0');
-        const depositData = "0x1de26e16" + hashClean + amountPadded;
+        
+        // Selectorul funcției deposit(bytes32,uint256)
+        const depositData = "0x1de26e16" + hashClean + amountHex; 
 
-        const depositTxHash = await window.ethereum.request({
+        const depositTx = await window.ethereum.request({
             method: 'eth_sendTransaction',
-            params: [{
-                from: userAccount,
-                to: YOUR_CONTRACT_ADDRESS,
-                data: depositData
+            params: [{ 
+                from: polygonUserAddress, 
+                to: POLYGON_CONTRACT, 
+                data: depositData 
             }]
         });
 
-        showStatus("✅ Tranzacție trimisă cu succes! Hash: " + depositTxHash.substring(0, 10) + "...");
-        document.getElementById("txHash").value = getRandomBytes32();
-
+        showStatus("✅ Depunere înregistrată cu succes! Hash: " + depositTx.substring(0,10) + "...");
+        document.getElementById("txHash").value = getRandomBytes32(); // Generăm un nou hash pentru următoarea tranzacție
     } catch (err) {
         console.error(err);
         showStatus("❌ Eroare: " + (err.message || err), true);
@@ -122,9 +109,3 @@ async function handleDeposit() {
         depositBtn.disabled = false;
     }
 }
-
-// Atașare Evenimente pe Butoane
-document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("connectBtn").addEventListener("click", connectWallet);
-    document.getElementById("depositBtn").addEventListener("click", handleDeposit);
-});
